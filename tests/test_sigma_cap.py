@@ -28,7 +28,9 @@ def test_cap_bounds_every_layer_sigma():
     unclamped = _run()
     cap = unclamped["sigmaMax"] * 0.5
     clamped = _run(sigma_max=cap)
-    assert clamped["sigmaMax"] <= cap + 1e-12
+    # sigmaMax reports the raw drift; the applied scale is what the cap bounds.
+    assert clamped["sigmaMax"] > cap
+    assert clamped["sigmaMaxApplied"] <= cap + 1e-12
     assert clamped["sigmaCap"] == cap
     assert clamped["sigmaClamped"] > 0
 

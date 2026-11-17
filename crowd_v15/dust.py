@@ -214,12 +214,16 @@ def dust_gradients(model: GPT, cfg: DustConfig, idx: torch.Tensor, tgt: torch.Te
 
             relative = cfg.sigma_mode == "relative"
             if relative:
-                sigma_map = {name: cfg.sigma_rel * float(value)
-                             for name, value in layer_scales.items()}
+                # ``sigmas`` keeps the *raw* per-layer scale, before any cap. The
+                # cap exists to stop an unbounded drift, so the stat that reports
+                # the drift has to be the pre-cap value: reporting the post-cap one
+                # makes a clamped arm look stationary by construction.
+                sigmas = {name: cfg.sigma_rel * float(value)
+                          for name, value in layer_scales.items()}
+                sigma_map = sigmas
                 if cfg.sigma_max is not None:
                     sigma_map = {name: min(value, cfg.sigma_max)
-                                 for name, value in sigma_map.items()}
-                sigmas = {name: value for name, value in sigma_map.items()}
+                                 for name, value in sigmas.items()}
             else:
                 sigma_map = cfg.sigma
                 sigmas = {}
@@ -260,6 +264,9 @@ def dust_gradients(model: GPT, cfg: DustConfig, idx: torch.Tensor, tgt: torch.Te
                         x_flat = record[name].reshape(-1, record[name].shape[-1]).float()
                         grads[key] += (weighted.t() @ x_flat) / scale
 
+    # ``sigma``/``sigmaMaxApplied`` describe what the model was actually perturbed
+    # with; ``sigmaMax`` describes the drift the cap is fighting.
+    applied = sigma_map if isinstance(sigma_map, dict) else None
     stats = {
         "population": cfg.population,
         "drawChunk": cfg.draw_chunk,
@@ -267,13 +274,14 @@ def dust_gradients(model: GPT, cfg: DustConfig, idx: torch.Tensor, tgt: torch.Te
         "draws": cfg.population,
         "tokens": total_tokens,
         "forwards": math.ceil(cfg.population / cfg.draw_chunk) * (1 + 2 * len(per_pass)),
-        "sigma": (min(sigmas.values()) if sigmas else cfg.sigma),
+        "sigma": (min(applied.values()) if applied else cfg.sigma),
         "noiseDevice": cfg.noise_device,
         "sigmaMode": cfg.sigma_mode,
         "sigmaRel": cfg.sigma_rel if sigmas else None,
         "sigmaMax": (max(sigmas.values()) if sigmas else cfg.sigma),
+        "sigmaMaxApplied": (max(applied.values()) if applied else cfg.sigma),
         "sigmaCap": cfg.sigma_max,
-        "sigmaClamped": (sum(1 for value in sigmas.values() if value >= cfg.sigma_max)
+        "sigmaClamped": (sum(1 for value in sigmas.values() if value > cfg.sigma_max)
                          if (sigmas and cfg.sigma_max is not None) else 0),
         "gamma": cfg.gamma,
         "gradNorm": float(math.sqrt(sum(float(g.pow(2).sum()) for g in grads.values()))),
