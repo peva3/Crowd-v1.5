@@ -160,6 +160,16 @@ def build(runs: Path, param_count: int) -> str:
         "(clamping or scheduling `sigma_rel`) is TODO G38, and the two hypotheses "
         "the run cannot separate are noise-scale drift and simply too few tokens.",
         "",
+        "**A CPU A/B has now separated them.** Three arms, 10 m preset, identical "
+        "windows, identical 100,096 evidence tokens each: relative uncapped bottoms "
+        "out at held-out 7.2322 at 50 k tokens and then *degrades* to 7.4336; relative "
+        "clamped to 4x its step-0 scale keeps falling to **7.0321**; absolute `1e-2` "
+        "(~9x more noise than the relative arm's start) reaches 7.8048 and is only a "
+        "magnitude control. So the drift costs ~0.40 held-out at equal tokens, and the "
+        "cap (`--sigma-max`) fixes it. The 24 h arms ran **uncapped** — that is the "
+        "honest reading of their late flatness. Single seed, 10 m, 100 k tokens: "
+        "direction, not a constant.",
+        "",
     ]
     return "\n".join(out + notes)
 
