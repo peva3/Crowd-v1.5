@@ -1,11 +1,11 @@
-# Crowd-v1.1
+# Crowd-v1.5
 **Experimental Fork of CrowdGPT - https://github.com/Vxtzq/CrowdGPT**
 
 Pretraining by **DUST** - perturbing activations instead of backpropagating - with
 a coordinator that accepts DUST and backprop submissions on **separate routes**.
 
-This is the ground work for the v2 pivot: v1 trained a 200 million parameters model with
-backprop and shipped dense weight deltas. v1.1 trains a **200m plain transformer**
+This is the ground work for the v2 pivot: v1 trained a 1000 million parameters model with
+backprop and shipped dense weight deltas. v1.5 trains a **200m plain transformer**
 and lets any device contribute, because DUST needs no backward pass, no optimizer
 state and no gradient buffer. Backprop stays in the tree as a route that is simply
 unused when DUST is active.
@@ -14,7 +14,7 @@ unused when DUST is active.
 
 The model is a plain decoder-only transformer: embeddings, pre-norm blocks
 (RMSNorm, fused-QKV attention, SwiGLU MLP), a final norm and a tied output head.
-Nothing else -- **no engram table, no MoE, no adapters, no LoRA**.
+Nothing else - **no engram table, no MoE, no adapters, no LoRA**.
 
 Engrams are removed due to incompatibilites (for now) with Evolution Strategies (ES)
 
